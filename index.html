@@ -9,11 +9,18 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="靜謐數獨">
+
+    <!-- 
+      網站圖示與 iOS App 圖示設定 
+      使用 SVG Data URI 確保離線可用性與向量清晰度
+    -->
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'%3E%3Crect width='180' height='180' rx='40' fill='%23b2ad7f'/%3E%3Cpath d='M60 30v120M120 30v120M30 60h120M30 120h120' stroke='white' stroke-width='4' stroke-opacity='0.4'/%3E%3Crect x='65' y='65' width='50' height='50' rx='8' fill='white'/%3E%3Ctext x='90' y='105' font-family='sans-serif' font-size='32' font-weight='bold' fill='%23b2ad7f' text-anchor='middle'%3E5%3C/text%3E%3C/svg%3E">
+    <link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'%3E%3Crect width='180' height='180' rx='40' fill='%23b2ad7f'/%3E%3Cpath d='M60 30v120M120 30v120M30 60h120M30 120h120' stroke='white' stroke-width='4' stroke-opacity='0.4'/%3E%3Crect x='65' y='65' width='50' height='50' rx='8' fill='white'/%3E%3Ctext x='90' y='105' font-family='sans-serif' font-size='32' font-weight='bold' fill='%23b2ad7f' text-anchor='middle'%3E5%3C/text%3E%3C/svg%3E">
     
     <style>
         /**
-         * 全域樣式與莫蘭迪色彩定義
-         * 採用日式商業風格，強調低飽和度與高質感的留白設計。
+         * @file 全域樣式定義
+         * 採用莫蘭迪色彩體系與日式極簡風格。
          */
         :root {
             --bg-color: #f7f3f0;
@@ -53,7 +60,8 @@
         }
 
         /**
-         * 螢幕切換容器
+         * @section 畫面切換容器
+         * 管理開始畫面與遊戲主畫面的顯示狀態。
          */
         .screen {
             display: none;
@@ -70,7 +78,7 @@
         }
 
         /**
-         * 開始畫面與菜單樣式
+         * @section 開始畫面組件樣式
          */
         #start-screen h1 {
             font-size: 2.5rem;
@@ -113,7 +121,7 @@
         }
 
         /**
-         * 遊戲頂部狀態欄
+         * @section 遊戲畫面頂部狀態列
          */
         header {
             width: 100%;
@@ -140,7 +148,7 @@
         }
 
         /**
-         * 數獨棋盤區域 (RWD)
+         * @section 數獨棋盤佈局
          */
         #sudoku-board {
             display: grid;
@@ -177,7 +185,6 @@
         .cell.fixed { font-weight: bold; color: var(--fixed-number); }
         .cell.user { color: var(--user-number); }
 
-        /* 筆記模式微型網格 */
         .notes-grid {
             display: grid;
             grid-template-columns: repeat(3, 1fr);
@@ -197,13 +204,12 @@
         }
 
         /**
-         * 操作控制區域
-         * 修正：增加了層級間的間距，避免誤觸。
+         * @section 操作控制面板樣式
          */
         .controls-area {
             display: flex;
             flex-direction: column;
-            gap: 25px; /* 增加數字列與功能列的間距 */
+            gap: 25px; 
             width: 100%;
             max-width: 420px;
             margin-top: 25px;
@@ -232,15 +238,15 @@
         .util-row {
             display: flex;
             gap: 12px;
-            padding: 0 4px; /* 稍微縮排，與數字列產生視覺落差 */
+            padding: 0 4px; 
         }
 
         .util-btn {
             flex: 1;
-            height: 48px; /* 固定高度，增加穩定感 */
+            height: 48px; 
             border-radius: 8px;
             border: 1px solid var(--border-main);
-            background: #ebe7e4; /* 使用稍深的背景色區隔 */
+            background: #ebe7e4; 
             color: var(--primary-text);
             font-size: 0.95rem;
             cursor: pointer;
@@ -258,9 +264,6 @@
             box-shadow: inset 0 2px 4px rgba(0,0,0,0.1);
         }
 
-        /**
-         * 版權聲明
-         */
         .copyright {
             position: absolute;
             bottom: 25px;
@@ -271,7 +274,7 @@
         }
 
         /**
-         * 通關彈窗樣式
+         * @section 遊戲完成提示彈窗
          */
         #modal-overlay {
             display: none;
@@ -306,7 +309,6 @@
 </head>
 <body>
 
-    <!-- 開始畫面 -->
     <div id="start-screen" class="screen active">
         <h1>靜謐數獨</h1>
         <p>SERENE SUDOKU</p>
@@ -318,7 +320,6 @@
         <footer class="copyright">© 2025 Hzwfork</footer>
     </div>
 
-    <!-- 遊戲畫面 -->
     <div id="game-screen" class="screen">
         <header>
             <button class="btn-icon" onclick="goHome()">◀ 選單</button>
@@ -329,7 +330,6 @@
         <div id="sudoku-board"></div>
 
         <div class="controls-area">
-            <!-- 數字輸入列 -->
             <div class="number-row">
                 <button class="num-btn" onclick="handleInput(1)">1</button>
                 <button class="num-btn" onclick="handleInput(2)">2</button>
@@ -341,7 +341,6 @@
                 <button class="num-btn" onclick="handleInput(8)">8</button>
                 <button class="num-btn" onclick="handleInput(9)">9</button>
             </div>
-            <!-- 功能操作列：增加了與數字列的間距 -->
             <div class="util-row">
                 <button id="note-toggle" class="util-btn" onclick="toggleNoteMode()">✎ 筆記</button>
                 <button class="util-btn" onclick="handleInput(0)">清除</button>
@@ -350,7 +349,6 @@
         </div>
     </div>
 
-    <!-- 成功彈窗 -->
     <div id="modal-overlay">
         <div class="modal">
             <h2>恭喜達成！</h2>
@@ -361,8 +359,8 @@
 
     <script>
         /**
-         * 遊戲核心邏輯模組
-         * 管理數獨生成、筆記陣列、計時器與視圖渲染。
+         * @module 遊戲狀態管理
+         * 處理數獨生成、計時、筆記及視圖更新。
          */
         const boardElement = document.getElementById('sudoku-board');
         const timerElement = document.getElementById('timer');
@@ -379,19 +377,28 @@
         let currentDiff = 'medium';
 
         /**
-         * UI 畫面控制
+         * @function showScreen
+         * 切換當前顯示的介面。
          */
         function showScreen(screenId) {
             document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
             document.getElementById(screenId).classList.add('active');
         }
 
+        /**
+         * @function goHome
+         * 重置遊戲狀態並返回開始畫面。
+         */
         function goHome() {
             clearInterval(timerInterval);
             document.getElementById('modal-overlay').style.display = 'none';
             showScreen('start-screen');
         }
 
+        /**
+         * @function updateTimer
+         * 每秒更新計時器顯示。
+         */
         function updateTimer() {
             secondsElapsed++;
             const mins = Math.floor(secondsElapsed / 60).toString().padStart(2, '0');
@@ -400,7 +407,8 @@
         }
 
         /**
-         * 數獨演算法：產生與求解
+         * @function generateSudoku
+         * 使用回溯演算法生成一個有效的完整數獨解。
          */
         function generateSudoku() {
             const board = Array(81).fill(0);
@@ -438,7 +446,8 @@
         }
 
         /**
-         * 遊戲初始化與重置
+         * @function startGame
+         * 初始化指定難度的遊戲環境。
          */
         function startGame(difficulty) {
             currentDiff = difficulty;
@@ -450,6 +459,10 @@
             showScreen('game-screen');
         }
 
+        /**
+         * @function refreshLevel
+         * 生成新關卡並重設計時與筆記。
+         */
         function refreshLevel() {
             solution = generateSudoku();
             initialBoard = [...solution];
@@ -469,7 +482,8 @@
         }
 
         /**
-         * 繪製數獨棋盤
+         * @function initDOM
+         * 動態建立棋盤儲存格的 DOM。
          */
         function initDOM() {
             boardElement.innerHTML = '';
@@ -481,6 +495,10 @@
             }
         }
 
+        /**
+         * @function renderBoard
+         * 根據目前資料模型更新棋盤視覺呈現。
+         */
         function renderBoard() {
             const cells = boardElement.children;
             const row = Math.floor(selectedIndex / 9);
@@ -516,13 +534,18 @@
         }
 
         /**
-         * 輸入與操作邏輯
+         * @function toggleNoteMode
+         * 切換筆記模式開關。
          */
         function toggleNoteMode() {
             isNoteMode = !isNoteMode;
             noteToggle.classList.toggle('active', isNoteMode);
         }
 
+        /**
+         * @function handleInput
+         * 處理使用者的數字輸入。
+         */
         function handleInput(num) {
             if (selectedIndex === -1 || initialBoard[selectedIndex] !== 0) return;
 
@@ -543,6 +566,10 @@
             if (!currentBoard.includes(0)) checkWin();
         }
 
+        /**
+         * @function checkWin
+         * 檢查遊戲是否成功完成。
+         */
         function checkWin() {
             const isCorrect = currentBoard.every((val, i) => val === solution[i]);
             if (isCorrect) {
@@ -552,7 +579,7 @@
             }
         }
 
-        // 實體鍵盤支援
+        // 鍵盤操作支援
         window.onkeydown = (e) => {
             if (e.key >= '1' && e.key <= '9') handleInput(parseInt(e.key));
             if (e.key === '0' || e.key === 'Backspace') handleInput(0);
