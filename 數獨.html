@@ -1,0 +1,563 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>靜謐數獨 | Serene Sudoku</title>
+    
+    <!-- iOS PWA 支援 -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="靜謐數獨">
+    
+    <style>
+        /**
+         * 全域樣式與莫蘭迪色彩定義
+         * 採用日式商業風格，強調低飽和度與高質感的留白設計。
+         */
+        :root {
+            --bg-color: #f7f3f0;
+            --cell-bg: #ffffff;
+            --primary-text: #4a4e4d;
+            --accent-green: #b2ad7f;
+            --accent-blue: #a2b9bc;
+            --error-red: #d6adad;
+            --border-main: #8e8d8a;
+            --border-light: #e0e0e0;
+            --highlight-bg: #f1f4f4;
+            --fixed-number: #2c3e50;
+            --user-number: #6b8e23;
+            --note-text: #9a9a9a;
+            --font-main: "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", sans-serif;
+        }
+
+        * {
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+            user-select: none;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--primary-text);
+            font-family: var(--font-main);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100dvh;
+            overflow: hidden;
+            padding: env(safe-area-inset-top) 15px env(safe-area-inset-bottom);
+        }
+
+        /**
+         * 螢幕切換容器
+         */
+        .screen {
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+            height: 100%;
+            position: relative;
+        }
+
+        .screen.active {
+            display: flex;
+        }
+
+        /**
+         * 開始畫面與菜單樣式
+         */
+        #start-screen h1 {
+            font-size: 2.5rem;
+            font-weight: 300;
+            margin-bottom: 10px;
+            letter-spacing: 4px;
+        }
+
+        #start-screen p {
+            font-size: 0.9rem;
+            color: var(--border-main);
+            margin-bottom: 40px;
+            letter-spacing: 1px;
+        }
+
+        .menu-options {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            width: 220px;
+        }
+
+        .menu-btn {
+            background: var(--cell-bg);
+            border: 1px solid var(--border-main);
+            color: var(--primary-text);
+            padding: 15px;
+            border-radius: 8px;
+            font-size: 1.1rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-align: center;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.02);
+        }
+
+        .menu-btn:active {
+            background: var(--accent-blue);
+            color: white;
+            transform: scale(0.98);
+        }
+
+        /**
+         * 遊戲頂部狀態欄
+         */
+        header {
+            width: 100%;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 0;
+            max-width: 420px;
+        }
+
+        .timer-box {
+            font-size: 1rem;
+            font-variant-numeric: tabular-nums;
+            color: var(--border-main);
+        }
+
+        .btn-icon {
+            background: none;
+            border: 1px solid var(--border-light);
+            padding: 6px 12px;
+            font-size: 0.8rem;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        /**
+         * 數獨棋盤區域 (RWD)
+         */
+        #sudoku-board {
+            display: grid;
+            grid-template-columns: repeat(9, 1fr);
+            grid-template-rows: repeat(9, 1fr);
+            width: 90vmin;
+            height: 90vmin;
+            max-width: 420px;
+            max-height: 420px;
+            border: 2px solid var(--border-main);
+            background-color: var(--border-main);
+            gap: 1px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+        }
+
+        .cell {
+            background: var(--cell-bg);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.4rem;
+            cursor: pointer;
+            position: relative;
+        }
+
+        .cell:nth-child(3n) { border-right: 1px solid var(--border-main); }
+        .cell:nth-child(9n) { border-right: none; }
+        .cell:nth-child(n+19):nth-child(-n+27),
+        .cell:nth-child(n+46):nth-child(-n+54) { border-bottom: 2px solid var(--border-main); }
+
+        .cell.selected { background-color: var(--accent-blue) !important; color: white !important; }
+        .cell.highlight { background-color: var(--highlight-bg); }
+        .cell.error { background-color: var(--error-red); color: white !important; }
+        .cell.fixed { font-weight: bold; color: var(--fixed-number); }
+        .cell.user { color: var(--user-number); }
+
+        /* 筆記模式微型網格 */
+        .notes-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            grid-template-rows: repeat(3, 1fr);
+            width: 100%;
+            height: 100%;
+            padding: 2px;
+            pointer-events: none;
+        }
+
+        .note-digit {
+            font-size: 0.55rem;
+            color: var(--note-text);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /**
+         * 操作控制區域
+         * 修正：增加了層級間的間距，避免誤觸。
+         */
+        .controls-area {
+            display: flex;
+            flex-direction: column;
+            gap: 25px; /* 增加數字列與功能列的間距 */
+            width: 100%;
+            max-width: 420px;
+            margin-top: 25px;
+        }
+
+        .number-row {
+            display: flex;
+            justify-content: space-between;
+            gap: 8px;
+        }
+
+        .num-btn {
+            flex: 1;
+            aspect-ratio: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+            background: var(--cell-bg);
+            border-radius: 8px;
+            border: 1px solid var(--border-light);
+            cursor: pointer;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.03);
+        }
+
+        .util-row {
+            display: flex;
+            gap: 12px;
+            padding: 0 4px; /* 稍微縮排，與數字列產生視覺落差 */
+        }
+
+        .util-btn {
+            flex: 1;
+            height: 48px; /* 固定高度，增加穩定感 */
+            border-radius: 8px;
+            border: 1px solid var(--border-main);
+            background: #ebe7e4; /* 使用稍深的背景色區隔 */
+            color: var(--primary-text);
+            font-size: 0.95rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            transition: all 0.2s ease;
+        }
+
+        .util-btn.active {
+            background: var(--accent-green);
+            color: white;
+            border-color: var(--accent-green);
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        /**
+         * 版權聲明
+         */
+        .copyright {
+            position: absolute;
+            bottom: 25px;
+            font-size: 0.75rem;
+            color: var(--border-main);
+            opacity: 0.6;
+            letter-spacing: 1px;
+        }
+
+        /**
+         * 通關彈窗樣式
+         */
+        #modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.4);
+            backdrop-filter: blur(2px);
+            z-index: 100;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal {
+            background: var(--bg-color);
+            padding: 40px 30px;
+            border-radius: 16px;
+            text-align: center;
+            max-width: 300px;
+            box-shadow: 0 15px 40px rgba(0,0,0,0.15);
+        }
+
+        .modal h2 { font-weight: 300; margin-bottom: 15px; letter-spacing: 2px; }
+        .modal p { color: var(--border-main); margin-bottom: 30px; font-size: 0.95rem; line-height: 1.6; }
+
+        @media (max-height: 750px) {
+            #start-screen h1 { font-size: 2rem; }
+            #sudoku-board { width: 85vmin; height: 85vmin; }
+            .controls-area { gap: 15px; margin-top: 15px; }
+            .util-btn { height: 40px; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- 開始畫面 -->
+    <div id="start-screen" class="screen active">
+        <h1>靜謐數獨</h1>
+        <p>SERENE SUDOKU</p>
+        <div class="menu-options">
+            <button class="menu-btn" onclick="startGame('easy')">簡單模式</button>
+            <button class="menu-btn" onclick="startGame('medium')">中等模式</button>
+            <button class="menu-btn" onclick="startGame('hard')">困難模式</button>
+        </div>
+        <footer class="copyright">© 2025 Hzwfork</footer>
+    </div>
+
+    <!-- 遊戲畫面 -->
+    <div id="game-screen" class="screen">
+        <header>
+            <button class="btn-icon" onclick="goHome()">◀ 選單</button>
+            <div id="difficulty-label" class="game-title">中等模式</div>
+            <div id="timer" class="timer-box">00:00</div>
+        </header>
+
+        <div id="sudoku-board"></div>
+
+        <div class="controls-area">
+            <!-- 數字輸入列 -->
+            <div class="number-row">
+                <button class="num-btn" onclick="handleInput(1)">1</button>
+                <button class="num-btn" onclick="handleInput(2)">2</button>
+                <button class="num-btn" onclick="handleInput(3)">3</button>
+                <button class="num-btn" onclick="handleInput(4)">4</button>
+                <button class="num-btn" onclick="handleInput(5)">5</button>
+                <button class="num-btn" onclick="handleInput(6)">6</button>
+                <button class="num-btn" onclick="handleInput(7)">7</button>
+                <button class="num-btn" onclick="handleInput(8)">8</button>
+                <button class="num-btn" onclick="handleInput(9)">9</button>
+            </div>
+            <!-- 功能操作列：增加了與數字列的間距 -->
+            <div class="util-row">
+                <button id="note-toggle" class="util-btn" onclick="toggleNoteMode()">✎ 筆記</button>
+                <button class="util-btn" onclick="handleInput(0)">清除</button>
+                <button class="util-btn" onclick="refreshLevel()">刷新</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 成功彈窗 -->
+    <div id="modal-overlay">
+        <div class="modal">
+            <h2>恭喜達成！</h2>
+            <p id="success-message">您已成功完成了這局遊戲。</p>
+            <button class="menu-btn" onclick="goHome()" style="width: 100%;">返回選單</button>
+        </div>
+    </div>
+
+    <script>
+        /**
+         * 遊戲核心邏輯模組
+         * 管理數獨生成、筆記陣列、計時器與視圖渲染。
+         */
+        const boardElement = document.getElementById('sudoku-board');
+        const timerElement = document.getElementById('timer');
+        const noteToggle = document.getElementById('note-toggle');
+        
+        let solution = [];
+        let currentBoard = [];
+        let initialBoard = [];
+        let noteBoard = Array.from({length: 81}, () => []);
+        let selectedIndex = -1;
+        let isNoteMode = false;
+        let timerInterval = null;
+        let secondsElapsed = 0;
+        let currentDiff = 'medium';
+
+        /**
+         * UI 畫面控制
+         */
+        function showScreen(screenId) {
+            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+            document.getElementById(screenId).classList.add('active');
+        }
+
+        function goHome() {
+            clearInterval(timerInterval);
+            document.getElementById('modal-overlay').style.display = 'none';
+            showScreen('start-screen');
+        }
+
+        function updateTimer() {
+            secondsElapsed++;
+            const mins = Math.floor(secondsElapsed / 60).toString().padStart(2, '0');
+            const secs = (secondsElapsed % 60).toString().padStart(2, '0');
+            timerElement.textContent = `${mins}:${secs}`;
+        }
+
+        /**
+         * 數獨演算法：產生與求解
+         */
+        function generateSudoku() {
+            const board = Array(81).fill(0);
+            const isValid = (b, idx, val) => {
+                const row = Math.floor(idx / 9), col = idx % 9;
+                for (let i = 0; i < 9; i++) {
+                    if (b[row * 9 + i] === val || b[i * 9 + col] === val) return false;
+                }
+                const sr = Math.floor(row / 3) * 3, sc = Math.floor(col / 3) * 3;
+                for (let i = 0; i < 3; i++) {
+                    for (let j = 0; j < 3; j++) {
+                        if (b[(sr + i) * 9 + (sc + j)] === val) return false;
+                    }
+                }
+                return true;
+            };
+            const solve = (b) => {
+                for (let i = 0; i < 81; i++) {
+                    if (b[i] === 0) {
+                        const nums = [1,2,3,4,5,6,7,8,9].sort(() => Math.random() - 0.5);
+                        for (let n of nums) {
+                            if (isValid(b, i, n)) {
+                                b[i] = n;
+                                if (solve(b)) return true;
+                                b[i] = 0;
+                            }
+                        }
+                        return false;
+                    }
+                }
+                return true;
+            };
+            solve(board);
+            return board;
+        }
+
+        /**
+         * 遊戲初始化與重置
+         */
+        function startGame(difficulty) {
+            currentDiff = difficulty;
+            const labels = { 'easy': '簡單模式', 'medium': '中等模式', 'hard': '困難模式' };
+            document.getElementById('difficulty-label').textContent = labels[difficulty];
+            
+            initDOM();
+            refreshLevel();
+            showScreen('game-screen');
+        }
+
+        function refreshLevel() {
+            solution = generateSudoku();
+            initialBoard = [...solution];
+            let holes = currentDiff === 'easy' ? 35 : (currentDiff === 'medium' ? 45 : 55);
+            const idxs = Array.from({length: 81}, (_, i) => i).sort(() => Math.random() - 0.5);
+            for (let i = 0; i < holes; i++) initialBoard[idxs[i]] = 0;
+
+            currentBoard = [...initialBoard];
+            noteBoard = Array.from({length: 81}, () => []);
+            selectedIndex = -1;
+            secondsElapsed = 0;
+            timerElement.textContent = "00:00";
+            
+            clearInterval(timerInterval);
+            timerInterval = setInterval(updateTimer, 1000);
+            renderBoard();
+        }
+
+        /**
+         * 繪製數獨棋盤
+         */
+        function initDOM() {
+            boardElement.innerHTML = '';
+            for (let i = 0; i < 81; i++) {
+                const cell = document.createElement('div');
+                cell.className = 'cell';
+                cell.onclick = () => { selectedIndex = i; renderBoard(); };
+                boardElement.appendChild(cell);
+            }
+        }
+
+        function renderBoard() {
+            const cells = boardElement.children;
+            const row = Math.floor(selectedIndex / 9);
+            const col = selectedIndex % 9;
+
+            for (let i = 0; i < 81; i++) {
+                const cell = cells[i];
+                cell.className = 'cell';
+                cell.innerHTML = ''; 
+
+                if (initialBoard[i] !== 0) {
+                    cell.classList.add('fixed');
+                    cell.textContent = initialBoard[i];
+                } else if (currentBoard[i] !== 0) {
+                    cell.classList.add('user');
+                    cell.textContent = currentBoard[i];
+                    if (currentBoard[i] !== solution[i]) cell.classList.add('error');
+                } else if (noteBoard[i].length > 0) {
+                    const grid = document.createElement('div');
+                    grid.className = 'notes-grid';
+                    for (let n = 1; n <= 9; n++) {
+                        const digit = document.createElement('div');
+                        digit.className = 'note-digit';
+                        digit.textContent = noteBoard[i].includes(n) ? n : '';
+                        grid.appendChild(digit);
+                    }
+                    cell.appendChild(grid);
+                }
+
+                if (i === selectedIndex) cell.classList.add('selected');
+                else if (Math.floor(i / 9) === row || i % 9 === col) cell.classList.add('highlight');
+            }
+        }
+
+        /**
+         * 輸入與操作邏輯
+         */
+        function toggleNoteMode() {
+            isNoteMode = !isNoteMode;
+            noteToggle.classList.toggle('active', isNoteMode);
+        }
+
+        function handleInput(num) {
+            if (selectedIndex === -1 || initialBoard[selectedIndex] !== 0) return;
+
+            if (num === 0) {
+                currentBoard[selectedIndex] = 0;
+                noteBoard[selectedIndex] = [];
+            } else if (isNoteMode) {
+                const idx = noteBoard[selectedIndex].indexOf(num);
+                if (idx > -1) noteBoard[selectedIndex].splice(idx, 1);
+                else noteBoard[selectedIndex].push(num);
+                currentBoard[selectedIndex] = 0;
+            } else {
+                currentBoard[selectedIndex] = num;
+                noteBoard[selectedIndex] = [];
+            }
+
+            renderBoard();
+            if (!currentBoard.includes(0)) checkWin();
+        }
+
+        function checkWin() {
+            const isCorrect = currentBoard.every((val, i) => val === solution[i]);
+            if (isCorrect) {
+                clearInterval(timerInterval);
+                document.getElementById('success-message').textContent = `您在 ${timerElement.textContent} 內完美解開了謎題。`;
+                document.getElementById('modal-overlay').style.display = 'flex';
+            }
+        }
+
+        // 實體鍵盤支援
+        window.onkeydown = (e) => {
+            if (e.key >= '1' && e.key <= '9') handleInput(parseInt(e.key));
+            if (e.key === '0' || e.key === 'Backspace') handleInput(0);
+            if (e.key === 'n' || e.key === 'N') toggleNoteMode();
+        };
+    </script>
+</body>
+</html>
